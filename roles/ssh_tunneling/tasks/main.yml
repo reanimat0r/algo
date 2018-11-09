@@ -38,10 +38,41 @@
       with_items: "{{ users }}"
       tags: update-users
 
+    - block:
+      - name: Build ssh keys
+        shell: >
+          umask 077;
+          echo -e 'y\n' |
+          ssh-keygen -t ecdsa -f {{ item }}.ssh.pem -N "" -q >/dev/null &&
+          ssh-keygen -y -f {{ item }}.ssh.pem > {{ item }}.pub
+        args:
+          chdir: "configs/{{ IP_subject_alt_name }}/"
+          creates: "{{ item }}.ssh.pem"
+          executable: bash
+        with_items: "{{ users }}"
+
+      - name: Slurp the public keys
+        slurp:
+          src: "configs/{{ IP_subject_alt_name }}/{{ item }}.ssh.pub"
+        register: ssh_public_keys
+        with_items: "{{ users }}"
+
+      - name: Slurp the public keys
+        set_fact:
+          ssh_public_keys_path: "{{ lookup('file', 'configs/' + IP_subject_alt_name + '/') }}"
+      when: not ipsec_enabled
+      delegate_to: localhost
+      become: false
+
+    - name: Slurp the public keys
+      set_fact:
+        ssh_public_keys_path: "{{ lookup('file', 'configs/' + IP_subject_alt_name + '/pki/public/') }}"
+      when: not ssh_public_keys_path
+
     - name: The authorized keys file created
       authorized_key:
         user: "{{ item }}"
-        key: "{{ lookup('file', 'configs/' + IP_subject_alt_name + '/pki/public/' + item + '.pub') }}"
+        key: "{{ ssh_public_keys_path }}/{{ item }}.pub"
         state: present
         manage_dir: true
         exclusive: true
