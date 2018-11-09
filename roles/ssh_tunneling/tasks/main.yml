@@ -42,31 +42,25 @@
       - name: Build ssh keys
         shell: >
           umask 077;
-          echo -e 'y\n' |
+          test -f {{ item }}.ssh.pem ||
           ssh-keygen -t ecdsa -f {{ item }}.ssh.pem -N "" -q >/dev/null &&
           ssh-keygen -y -f {{ item }}.ssh.pem > {{ item }}.pub
         args:
           chdir: "configs/{{ IP_subject_alt_name }}/"
-          creates: "{{ item }}.ssh.pem"
+          creates: "{{ item }}.pub"
           executable: bash
         with_items: "{{ users }}"
 
-      - name: Slurp the public keys
-        slurp:
-          src: "configs/{{ IP_subject_alt_name }}/{{ item }}.ssh.pub"
-        register: ssh_public_keys
-        with_items: "{{ users }}"
-
-      - name: Slurp the public keys
+      - name: Set ssh public key path as a fact
         set_fact:
-          ssh_public_keys_path: "{{ lookup('file', 'configs/' + IP_subject_alt_name + '/') }}"
+          ssh_public_keys_path: "configs/{{ IP_subject_alt_name }}/"
       when: not ipsec_enabled
       delegate_to: localhost
       become: false
 
-    - name: Slurp the public keys
+    - name: Set ssh public key path as a fact
       set_fact:
-        ssh_public_keys_path: "{{ lookup('file', 'configs/' + IP_subject_alt_name + '/pki/public/') }}"
+        ssh_public_keys_path: "configs/{{ IP_subject_alt_name }}/pki/public/"
       when: not ssh_public_keys_path
 
     - name: The authorized keys file created
