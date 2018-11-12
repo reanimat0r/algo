@@ -43,7 +43,7 @@
         shell: >
           umask 077;
           test -f {{ item }}.ssh.pem ||
-          ssh-keygen -t ecdsa -f {{ item }}.ssh.pem -N "" -q >/dev/null &&
+          ssh-keygen -t ecdsa -f {{ item }}.ssh.pem -N "" -b 384 -q >/dev/null &&
           ssh-keygen -y -f {{ item }}.ssh.pem > {{ item }}.pub
         args:
           chdir: "configs/{{ IP_subject_alt_name }}/"
@@ -61,12 +61,12 @@
     - name: Set ssh public key path as a fact
       set_fact:
         ssh_public_keys_path: "configs/{{ IP_subject_alt_name }}/pki/public/"
-      when: not ssh_public_keys_path
+      when: ssh_public_keys_path is not defined
 
     - name: The authorized keys file created
       authorized_key:
         user: "{{ item }}"
-        key: "{{ ssh_public_keys_path }}/{{ item }}.pub"
+        key: "{{ lookup('file', ssh_public_keys_path + item + '.pub') }}"
         state: present
         manage_dir: true
         exclusive: true
