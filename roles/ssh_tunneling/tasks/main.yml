@@ -71,7 +71,7 @@
         manage_dir: true
         exclusive: true
       with_items: "{{ users }}"
-      tags: update-users
+    tags: update-users
 
     - name: Generate SSH fingerprints
       shell: ssh-keyscan {{ IP_subject_alt_name }} 2>/dev/null
